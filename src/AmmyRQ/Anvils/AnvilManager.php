@@ -201,7 +201,7 @@ class AnvilManager
         }
 
         //Deletes the source item
-        $inv->setItem(0, $inv->getItem(0)->setCount($inv->getItem(0)->getCount() - 1));
+        $inv->setItem(0, $inv->getItem(0)->setCount(0));
 
         if ($player->getInventory()->canAddItem($resultItem))
         {
