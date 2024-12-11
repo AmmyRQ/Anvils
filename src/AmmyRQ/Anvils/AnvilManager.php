@@ -234,18 +234,25 @@ class AnvilManager
     {
         $world = $block->getPosition()->getWorld();
 
-        //If the anvil is severely damaged, the block "breaks"
-        if($block->getDamage()+1 >= Anvil::VERY_DAMAGED)
+        //Each anvil has a 12% chance of being damaged per use
+        $probability = rand(1, 100);
+        if($probability <= 12)
         {
-            $world->addSound($block->getPosition(), new AnvilBreakSound());
-            $world->setBlock($block->getPosition(), VanillaBlocks::AIR());
-            $world->addParticle($block->getPosition(), new BlockBreakParticle(VanillaBlocks::ANVIL()));
+            //If the anvil is severely damaged, the block "breaks"
+            if($block->getDamage()+1 > Anvil::VERY_DAMAGED)
+            {
+                $world->addSound($block->getPosition(), new AnvilBreakSound());
+                $world->setBlock($block->getPosition(), VanillaBlocks::AIR());
+                $world->addParticle($block->getPosition(), new BlockBreakParticle(VanillaBlocks::ANVIL()));
+
+                return;
+            }
+            else
+                $block->setDamage($block->getDamage()+1);
         }
-        else
-        {
-            $world->addSound($block->getPosition(), new AnvilUseSound());
-            $block->setDamage($block->getDamage()+1);
-        }
+
+        $world->addSound($block->getPosition(), new AnvilUseSound());
+        $world->setBlock($block->getPosition(), $block); //Replaces the original block with the damaged one
     }
 
 }
