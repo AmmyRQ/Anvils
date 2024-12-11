@@ -1,7 +1,7 @@
 ---
 name: Anvils
 main: AmmyRQ\Anvils\Main
-api: 5.0.0
-version: 1.0
+api: 5.23.0
+version: 1.1
 author: AmmyRQ
 ...

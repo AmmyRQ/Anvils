@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AmmyRQ\Anvils;
 
 
+use AmmyRQ\Anvils\exception\UndefinedPlayerException;
 use AmmyRQ\Anvils\utils\EnchantmentsXP_Cost;
 use pocketmine\block\{Anvil, VanillaBlocks, inventory\AnvilInventory};
 use pocketmine\item\{Durable, enchantment\EnchantmentInstance, VanillaItems};
@@ -57,6 +58,7 @@ class AnvilManager
      * @param AnvilInventory $inv
      * @param array $filterStrings
      * @return bool
+     * @throws UndefinedPlayerException
      */
     public static function processResult(Player $player, AnvilInventory $inv, array $filterStrings) : bool
     {
@@ -201,7 +203,7 @@ class AnvilManager
         }
 
         //Deletes the source item
-        $inv->setItem(0, $inv->getItem(0)->setCount($inv->getItem(0)->getCount() - 1));
+        $inv->setItem(0, $inv->getItem(0)->setCount(0));
 
         if ($player->getInventory()->canAddItem($resultItem))
         {
@@ -210,6 +212,9 @@ class AnvilManager
                 $player->getXpManager()->subtractXpLevels($xpCost);
 
             $player->getInventory()->addItem($resultItem);
+
+            if(!array_key_exists($player->getName(), self::$anvils))
+                throw new UndefinedPlayerException("The player \"" . $player->getName() . "\" does not exist in the plugin's registered data.");
 
             //Damages the anvil if it is not broken yet
             if ($player->getWorld()->getBlock(self::$anvils[$player->getName()]->getPosition())->getTypeId() !== VanillaBlocks::AIR()->getTypeId())
@@ -229,17 +234,25 @@ class AnvilManager
     {
         $world = $block->getPosition()->getWorld();
 
-        //If the anvil is severely damaged, the block "breaks"
-        if($block->getDamage()+1 >= Anvil::VERY_DAMAGED)
+        //Each anvil has a 12% chance of being damaged per use
+        $probability = rand(1, 100);
+        if($probability <= 12)
         {
-            $world->addSound($block->getPosition(), new AnvilBreakSound());
-            $world->setBlock($block->getPosition(), VanillaBlocks::AIR());
-            $world->addParticle($block->getPosition(), new BlockBreakParticle(VanillaBlocks::ANVIL()));
+            //If the anvil is severely damaged, the block "breaks"
+            if($block->getDamage()+1 > Anvil::VERY_DAMAGED)
+            {
+                $world->addSound($block->getPosition(), new AnvilBreakSound());
+                $world->setBlock($block->getPosition(), VanillaBlocks::AIR());
+                $world->addParticle($block->getPosition(), new BlockBreakParticle(VanillaBlocks::ANVIL()));
+
+                return;
+            }
+            else
+                $block->setDamage($block->getDamage()+1);
         }
-        else
-        {
-            $world->addSound($block->getPosition(), new AnvilUseSound());
-            $block->setDamage($block->getDamage()+1);
-        }
+
+        $world->addSound($block->getPosition(), new AnvilUseSound());
+        $world->setBlock($block->getPosition(), $block); //Replaces the original block with the damaged one
     }
+
 }
