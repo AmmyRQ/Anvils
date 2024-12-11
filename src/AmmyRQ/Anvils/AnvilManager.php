@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AmmyRQ\Anvils;
 
 
+use AmmyRQ\Anvils\exception\UndefinedPlayerException;
 use AmmyRQ\Anvils\utils\EnchantmentsXP_Cost;
 use pocketmine\block\{Anvil, VanillaBlocks, inventory\AnvilInventory};
 use pocketmine\item\{Durable, enchantment\EnchantmentInstance, VanillaItems};
@@ -57,6 +58,7 @@ class AnvilManager
      * @param AnvilInventory $inv
      * @param array $filterStrings
      * @return bool
+     * @throws UndefinedPlayerException
      */
     public static function processResult(Player $player, AnvilInventory $inv, array $filterStrings) : bool
     {
@@ -211,6 +213,9 @@ class AnvilManager
 
             $player->getInventory()->addItem($resultItem);
 
+            if(!array_key_exists($player->getName(), self::$anvils))
+                throw new UndefinedPlayerException("The player \"" . $player->getName() . "\" does not exist in the plugin's registered data.");
+
             //Damages the anvil if it is not broken yet
             if ($player->getWorld()->getBlock(self::$anvils[$player->getName()]->getPosition())->getTypeId() !== VanillaBlocks::AIR()->getTypeId())
                 self::damageAnvil(self::$anvils[$player->getName()]);
@@ -242,4 +247,5 @@ class AnvilManager
             $block->setDamage($block->getDamage()+1);
         }
     }
+
 }
