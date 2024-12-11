@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace AmmyRQ\Anvils;
 
-use pocketmine\block\{Anvil, inventory\AnvilInventory};
-use pocketmine\event\{
-    Listener,
+use pocketmine\block\{Anvil, inventory\AnvilInventory,};
+use pocketmine\event\{Listener,
     inventory\InventoryCloseEvent,
+    player\PlayerDeathEvent,
     player\PlayerInteractEvent,
-    server\DataPacketReceiveEvent
-};
+    player\PlayerQuitEvent,
+    server\DataPacketReceiveEvent};
 use pocketmine\plugin\PluginBase;
 use pocketmine\network\mcpe\protocol\{
     ItemStackRequestPacket,
@@ -18,7 +18,8 @@ use pocketmine\network\mcpe\protocol\{
     types\inventory\stackrequest\PlaceStackRequestAction
 };
 
-class Main extends PluginBase implements Listener{
+class Main extends PluginBase implements Listener
+{
 
     /**
      * @return void
@@ -55,6 +56,16 @@ class Main extends PluginBase implements Listener{
     }
 
     /**
+     * @param PlayerQuitEvent|PlayerDeathEvent $event
+     * @return void
+     */
+    public function onDifferentPlayerEvents(PlayerQuitEvent|PlayerDeathEvent $event) : void
+    {
+        $player = $event->getPlayer();
+        AnvilManager::removePlayerData($player);
+    }
+
+    /**
      * @param DataPacketReceiveEvent $event
      * @return void
      */
@@ -71,12 +82,29 @@ class Main extends PluginBase implements Listener{
             {
                 $pk = $event->getPacket();
                 if($pk instanceof ItemStackRequestPacket)
+                {
                     foreach($pk->getRequests() as $request)
+                    {
                         foreach ($request->getActions() as $action)
+                        {
                             if ($action instanceof PlaceStackRequestAction)
-                                if ($action->getSource()->getContainerId() === ContainerUIIds::CREATED_OUTPUT) //Picking up the object (Result)
-                                    if(!AnvilManager::processResult($player, $inv, $request->getFilterStrings()))
-                                        $event->cancel();
+                            {
+                                if ($action->getSource()->getContainerName()->getContainerId() === ContainerUIIds::CREATED_OUTPUT) //Picking up the object (Result)
+                                {
+                                    try
+                                    {
+                                        if (!AnvilManager::processResult($player, $inv, $request->getFilterStrings()))
+                                            $event->cancel();
+                                    }
+                                    catch (exception\UndefinedPlayerException $e)
+                                    {
+                                        $this->getServer()->getLogger()->error($e->getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
